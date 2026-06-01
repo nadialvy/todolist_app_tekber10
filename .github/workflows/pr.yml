@@ -84,10 +84,7 @@ jobs:
   preview:
     name: Preview deploy
     runs-on: ubuntu-latest
-    # Gate preview only behind the security scan. `quality` (strict analyze) runs
-    # as its own check but does not block the preview deploy for now — re-add it
-    # to `needs` once the pre-existing analyze debt is cleared.
-    needs: [security]
+    needs: [security, quality]
     steps:
       - uses: actions/checkout@v4
 
