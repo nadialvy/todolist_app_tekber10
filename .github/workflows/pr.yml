@@ -115,7 +115,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: >-
             pages deploy build/web
-            --project-name=${{ vars.CLOUDFLARE_PAGES_PROJECT }}
+            --project-name=todolist-app-tekber
             --branch=pr-${{ github.event.pull_request.number }}
 
       - name: Comment preview URL on PR
@@ -127,6 +127,6 @@ jobs:
 
             | | |
             |---|---|
-            | **Preview URL** | https://pr-${{ github.event.pull_request.number }}.${{ vars.PREVIEW_DOMAIN }} |
+            | **Preview URL** | https://pr-${{ github.event.pull_request.number }}.todolist-app-tekber.pages.dev |
             | **Cloudflare alias** | ${{ steps.deploy.outputs.deployment-url }} |
             | **Commit** | ${{ github.event.pull_request.head.sha }} |
