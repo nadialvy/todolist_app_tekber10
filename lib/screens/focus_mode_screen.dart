@@ -170,7 +170,7 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 12),
+                  const s(width: 12),
                   // Cancel button (filled)
                   Expanded(
                     child: ElevatedButton(
