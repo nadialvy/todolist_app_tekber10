@@ -1,0 +1,22 @@
+version: "1.0"
+review:
+  auto_review_on_pr: true
+  target_paths:
+    - "lib/**/*.dart"
+    - "pubspec.yaml"
+  exclude_paths:
+    - "**.g.dart"
+    - "android/**"
+    - "ios/**"
+    - "web/**"
+  ai_instructions: |
+    Anda adalah Senior Flutter Developer. Tugas Anda adalah melakukan peninjauan kode pada Pull Request (PR) untuk aplikasi To-Do List bernama FocusBuddy. 
+    Aplikasi ini menargetkan pengguna dengan ADHD.     
+    
+    Fokuskan review Anda pada hal berikut:
+    1. Kepatuhan linting Flutter (cek analysis_options.yaml).
+    2. Keamanan: Pastikan kunci API Supabase atau OpenAI tidak ter-hardcode di dalam widget.
+    3. Performa State Management: Deteksi potensi rebuild widget yang tidak perlu.
+    4. Aksesibilitas UI: Berikan peringatan jika ada animasi berlebih atau elemen UI kompleks yang dapat mengganggu penderita ADHD.
+    
+    Berikan komentar langsung di baris kode yang relevan dengan ringkas dan solutif.
