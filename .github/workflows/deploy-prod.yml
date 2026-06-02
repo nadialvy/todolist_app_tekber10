@@ -74,6 +74,8 @@ jobs:
         id: assignees
         if: failure()
         uses: actions/github-script@v7
+        env:
+          NOTIFY_EMAILS: ${{ secrets.NOTIFY_EMAILS }}
         with:
           script: |
             const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
@@ -82,7 +84,14 @@ jobs:
               commit_sha: context.sha,
             });
             const logins = prs.flatMap(pr => pr.assignees.map(a => a.login));
+            const emails = [];
+            for (const login of logins) {
+              const { data: user } = await github.rest.users.getByUsername({ username: login });
+              if (user.email) emails.push(user.email);
+            }
+            const fallback = process.env.NOTIFY_EMAILS;
             core.setOutput('logins', logins.length > 0 ? logins.join(', ') : context.actor);
+            core.setOutput('emails', emails.length > 0 ? emails.join(',') : fallback);
 
       - name: Send failure notification
         if: failure()
@@ -94,7 +103,7 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "[Production] Deployment failed — ${{ github.repository }}"
-          to: ${{ secrets.NOTIFY_EMAILS }}
+          to: ${{ steps.assignees.outputs.emails }}
           from: "${{ secrets.SMTP_USERNAME }}"
           body: |
             PRODUCTION deployment failed — immediate attention required.

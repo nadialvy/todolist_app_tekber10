@@ -98,6 +98,17 @@ jobs:
           gsutil cat gs://${{ env.BUCKET }}/releases/${{ inputs.release_timestamp }}/manifest.json \
           || echo "No manifest found for this release."
 
+      - name: Get actor email
+        id: actor
+        uses: actions/github-script@v7
+        env:
+          NOTIFY_EMAILS: ${{ secrets.NOTIFY_EMAILS }}
+        with:
+          script: |
+            const { data: user } = await github.rest.users.getByUsername({ username: context.actor });
+            const fallback = process.env.NOTIFY_EMAILS;
+            core.setOutput('email', user.email || fallback);
+
       - name: Send rollback notification
         uses: dawidd6/action-send-mail@v3
         with:
@@ -107,7 +118,7 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "[${{ inputs.environment }}] Rollback executed — ${{ github.repository }}"
-          to: ${{ secrets.NOTIFY_EMAILS }}
+          to: ${{ steps.actor.outputs.email }}
           from: "${{ secrets.SMTP_USERNAME }}"
           body: |
             A rollback was executed.
