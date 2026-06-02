@@ -1,0 +1,111 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [main]
+
+env:
+  FLUTTER_VERSION: "3.38.3"
+
+jobs:
+  deploy:
+    name: Build & deploy to production
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: stable
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Create .env
+        run: echo "OPENAI_API_KEY=${{ secrets.PROD_OPENAI_API_KEY }}" > .env
+
+      - name: Build Flutter Web
+        run: flutter build web --release --dart-define=ENVIRONMENT=production
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
+          service_account: ${{ secrets.GCP_SA_EMAIL }}
+
+      - name: Setup gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Backup current production deployment
+        run: |
+          TIMESTAMP=$(date +%Y%m%d%H%M%S)
+          echo "RELEASE_TIMESTAMP=${TIMESTAMP}" >> "$GITHUB_ENV"
+          gsutil -m rsync -r \
+            gs://${{ secrets.GCP_PROD_BUCKET }}/current \
+            gs://${{ secrets.GCP_PROD_BUCKET }}/releases/${TIMESTAMP} \
+          || echo "No existing deployment to backup — skipping"
+
+      - name: Deploy to production
+        run: |
+          gsutil -m rsync -r -d build/web \
+            gs://${{ secrets.GCP_PROD_BUCKET }}/current
+
+      - name: Write release manifest
+        run: |
+          cat <<EOF | gsutil cp - gs://${{ secrets.GCP_PROD_BUCKET }}/releases/${{ env.RELEASE_TIMESTAMP }}/manifest.json
+          {
+            "environment": "production",
+            "sha": "${{ github.sha }}",
+            "ref": "${{ github.ref_name }}",
+            "actor": "${{ github.actor }}",
+            "timestamp": "${{ env.RELEASE_TIMESTAMP }}",
+            "run_id": "${{ github.run_id }}"
+          }
+          EOF
+
+      - name: Get merged PR assignees
+        id: assignees
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              commit_sha: context.sha,
+            });
+            const logins = prs.flatMap(pr => pr.assignees.map(a => a.login));
+            core.setOutput('logins', logins.length > 0 ? logins.join(', ') : context.actor);
+
+      - name: Send failure notification
+        if: failure()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.gmail.com
+          server_port: 587
+          secure: false
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: "🚨 [Production] Deployment failed — ${{ github.repository }}"
+          to: ${{ secrets.NOTIFY_EMAILS }}
+          from: "${{ secrets.SMTP_USERNAME }}"
+          body: |
+            PRODUCTION deployment failed — immediate attention required.
+
+            Repository : ${{ github.repository }}
+            Branch     : ${{ github.ref_name }}
+            Commit     : ${{ github.sha }}
+            Triggered  : ${{ github.actor }}
+            Assignees  : ${{ steps.assignees.outputs.logins }}
+
+            View run   : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            To rollback, trigger the "Rollback Deployment" workflow manually:
+            ${{ github.server_url }}/${{ github.repository }}/actions/workflows/rollback.yml
