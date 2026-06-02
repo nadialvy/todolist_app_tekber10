@@ -83,7 +83,7 @@ jobs:
           SAFETY_TS=$(date +%Y%m%d%H%M%S)
           gsutil -m rsync -r \
             gs://${{ env.BUCKET }}/current \
-            gs://${{ env.BUCKET }}/releases/pre-rollback-${SAFETY_TS} \
+            gs://${{ env.BUCKET }}/pre-rollbacks/${SAFETY_TS} \
           || echo "Nothing to backup — continuing"
 
       - name: Restore release ${{ inputs.release_timestamp }}
