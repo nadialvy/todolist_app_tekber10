@@ -104,7 +104,7 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "[Production] Deployment succeeded — ${{ github.repository }}"
-          to: ${{ steps.assignees.outputs.emails }}
+          to: ${{ steps.assignees.outputs.emails || secrets.NOTIFY_EMAILS }}
           from: "${{ secrets.SMTP_USERNAME }}"
           body: |
             Production deployment succeeded.
@@ -128,7 +128,7 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: "[Production] Deployment failed — ${{ github.repository }}"
-          to: ${{ steps.assignees.outputs.emails }}
+          to: ${{ steps.assignees.outputs.emails || secrets.NOTIFY_EMAILS }}
           from: "${{ secrets.SMTP_USERNAME }}"
           body: |
             PRODUCTION deployment failed — immediate attention required.
