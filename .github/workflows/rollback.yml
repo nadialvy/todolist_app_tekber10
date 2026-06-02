@@ -82,15 +82,21 @@ jobs:
         run: |
           SAFETY_TS=$(date +%Y%m%d%H%M%S)
           gsutil -m rsync -r \
+<<<<<<< Updated upstream
             gs://${{ env.BUCKET }}/current \
+=======
+            -x "^releases/.*$|^pre-rollbacks/.*$" \
+            gs://${{ env.BUCKET }} \
+>>>>>>> Stashed changes
             gs://${{ env.BUCKET }}/pre-rollbacks/${SAFETY_TS} \
           || echo "Nothing to backup — continuing"
 
       - name: Restore release ${{ inputs.release_timestamp }}
         run: |
           gsutil -m rsync -r -d \
+            -x "^releases/.*$|^pre-rollbacks/.*$" \
             gs://${{ env.BUCKET }}/releases/${{ inputs.release_timestamp }} \
-            gs://${{ env.BUCKET }}/current
+            gs://${{ env.BUCKET }}
           echo "✅ Rollback to ${{ inputs.release_timestamp }} complete."
 
       - name: Show restored manifest
