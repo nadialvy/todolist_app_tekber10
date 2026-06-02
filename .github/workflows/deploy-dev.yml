@@ -73,6 +73,7 @@ jobs:
       - name: Get merged PR assignees
         id: assignees
         if: always()
+        continue-on-error: true
         uses: actions/github-script@v7
         env:
           NOTIFY_EMAILS: ${{ secrets.NOTIFY_EMAILS }}
