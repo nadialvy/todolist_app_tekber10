@@ -106,7 +106,7 @@ jobs:
           secure: false
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "⏪ [${{ inputs.environment }}] Rollback executed — ${{ github.repository }}"
+          subject: "[${{ inputs.environment }}] Rollback executed — ${{ github.repository }}"
           to: ${{ secrets.NOTIFY_EMAILS }}
           from: "${{ secrets.SMTP_USERNAME }}"
           body: |
