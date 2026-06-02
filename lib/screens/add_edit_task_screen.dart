@@ -147,7 +147,7 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
               maxLines: 3,
               validator: (value) {
                 if (value == null || value.isEmpty) {
-                  return 'Please enter a description';
+                  return 'Please enter a descriptions';
                 }
                 return null;
               },
