@@ -80,10 +80,6 @@ jobs:
         uses: actions/github-script@v7
         env:
           NOTIFY_EMAILS: ${{ secrets.NOTIFY_EMAILS }}
-<<<<<<< Updated upstream
-          USER_EMAIL_MAP: ${{ secrets.USER_EMAIL_MAP }}
-=======
->>>>>>> Stashed changes
         with:
           script: |
             const { data: prs } = await github.rest.repos.listPullRequestsAssociatedWithCommit({
@@ -92,20 +88,11 @@ jobs:
               commit_sha: context.sha,
             });
             const logins = prs.flatMap(pr => pr.assignees.map(a => a.login));
-<<<<<<< Updated upstream
-            const emailMap = Object.fromEntries(
-              (process.env.USER_EMAIL_MAP || '').split(',')
-                .map(e => e.trim().split(':'))
-                .filter(parts => parts.length === 2)
-            );
-            const emails = logins.map(login => emailMap[login]).filter(Boolean);
-=======
             const emails = [];
             for (const login of logins) {
               const { data: user } = await github.rest.users.getByUsername({ username: login });
               if (user.email) emails.push(user.email);
             }
->>>>>>> Stashed changes
             const fallback = process.env.NOTIFY_EMAILS;
             core.setOutput('logins', logins.length > 0 ? logins.join(', ') : context.actor);
             core.setOutput('emails', emails.length > 0 ? emails.join(',') : fallback);
@@ -130,11 +117,7 @@ jobs:
             Commit     : ${{ github.sha }}
             Triggered  : ${{ github.actor }}
             Assignees  : ${{ steps.assignees.outputs.logins }}
-<<<<<<< Updated upstream
-            URL        : https://storage.googleapis.com/${{ secrets.GCP_PROD_BUCKET }}/current/index.html
-=======
             URL        : https://storage.googleapis.com/${{ secrets.GCP_PROD_BUCKET }}/index.html
->>>>>>> Stashed changes
 
             View run   : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
