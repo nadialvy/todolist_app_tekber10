@@ -350,7 +350,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                                 .withValues(alpha: 0.3),
                                             BlendMode.srcIn)),
                                     const SizedBox(height: AppSpacing.md),
-                                    Text('No tasks found',
+                                    Text('No tasks found in here',
                                         style: AppTextStyles.bodyLarge.copyWith(
                                             color: Theme.of(context)
                                                 .colorScheme
