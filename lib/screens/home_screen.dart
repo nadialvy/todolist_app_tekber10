@@ -236,7 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
                               });
                             },
                             decoration: InputDecoration(
-                              hintText: 'Search task',
+                              hintText: 'Search new task',
                               hintStyle: AppTextStyles.bodyMedium.copyWith(
                                   color: Theme.of(context)
                                       .colorScheme
