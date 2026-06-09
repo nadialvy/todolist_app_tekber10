@@ -140,7 +140,7 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
               const SizedBox(height: 20),
               // Title
               Text(
-                'Are you sure you want to\ncomplete this task?',
+                'Are you sure you want to\ncomplete this task??',
                 textAlign: TextAlign.center,
                 style: AppTextStyles.h3.copyWith(
                   color: Theme.of(context).colorScheme.onSurface,
