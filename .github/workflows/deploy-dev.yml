@@ -97,30 +97,6 @@ jobs:
             core.setOutput('logins', logins.length > 0 ? logins.join(', ') : context.actor);
             core.setOutput('emails', emails.length > 0 ? emails.join(',') : fallback);
 
-      - name: Send success notification
-        if: success()
-        uses: dawidd6/action-send-mail@v3
-        with:
-          server_address: smtp.gmail.com
-          server_port: 587
-          secure: false
-          username: ${{ secrets.SMTP_USERNAME }}
-          password: ${{ secrets.SMTP_PASSWORD }}
-          subject: "[Dev] Deployment succeeded — ${{ github.repository }}"
-          to: ${{ steps.assignees.outputs.emails || secrets.NOTIFY_EMAILS }}
-          from: "${{ secrets.SMTP_USERNAME }}"
-          body: |
-            Dev deployment succeeded.
-
-            Repository : ${{ github.repository }}
-            Branch     : ${{ github.ref_name }}
-            Commit     : ${{ github.sha }}
-            Triggered  : ${{ github.actor }}
-            Assignees  : ${{ steps.assignees.outputs.logins }}
-            URL        : https://storage.googleapis.com/${{ secrets.GCP_DEV_BUCKET }}/index.html
-
-            View run   : ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
       - name: Send failure notification
         if: failure()
         uses: dawidd6/action-send-mail@v3
