@@ -55,10 +55,7 @@ jobs:
 
       - name: Deploy to production
         run: |
-          gsutil -m rsync -r -d \
-            -x "^releases/.*$|^pre-rollbacks/.*$" \
-            build/web \
-            gs://${{ secrets.GCP_PROD_BUCKET }}
+          gsutil -m rsync -r -d -x "^(releases|pre-rollbacks)/.*$" build/web gs://${{ secrets.GCP_PROD_BUCKET }}
 
       - name: Write release manifest
         run: |
