@@ -339,7 +339,12 @@ class _HomeScreenState extends State<HomeScreen> {
                               return Center(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                           
+                                  children: [
+                                    SvgPicture.asset('images/not-found.svg',
+                                        width: 64,
+                                        height: 64,
+                                        colorFilter: ColorFilter.mode(
+                                            Theme.of(context)
                                                 .colorScheme
                                                 .onSurface
                                                 .withValues(alpha: 0.3),
