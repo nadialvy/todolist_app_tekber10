@@ -1,7 +1,7 @@
 resource "google_storage_bucket" "flutter_web_buckets" {
-  for_each      = toset(variable.bucket_names)
-  name          = "focusbuddy-${each.key}-${variable.project_id}"
-  location      = variable.region
+  for_each      = toset(var.bucket_names)
+  name          = "focusbuddy-${each.key}-${var.project_id}"
+  location      = var.region
   force_destroy = true
 
   website {
