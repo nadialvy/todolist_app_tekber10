@@ -132,7 +132,7 @@ class ProfileScreen extends StatelessWidget {
                                                   Text(
                                                     profile.age != null
                                                         ? '${profile.age} years old'
-                                                        : 'No age set',
+                                                        : 'No age set.',
                                                     style: TextStyle(
                                                       fontSize: 14,
                                                       color: Theme.of(context)
