@@ -71,7 +71,7 @@ class _SignInScreenState extends State<SignInScreen> {
               const SizedBox(height: 80), // Top padding
               const Center(
                 child: Text(
-                  'Welcome Back',
+                  'Welcome to My Vlog!',
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.w600,
