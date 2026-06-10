@@ -6,9 +6,9 @@ coverage:
         threshold: 1%        
     patch:
       default:
-        target: auto
-        threshold: 1%
-        informational: true
+        target: 80%          # DEMO: new lines must be >=80% covered
+        threshold: 0%
+        informational: false # DEMO: make the patch check BLOCK (red) on failure
 
 comment:
   layout: "reach, diff, flags, files"
