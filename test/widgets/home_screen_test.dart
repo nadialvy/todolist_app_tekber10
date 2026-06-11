@@ -8,8 +8,11 @@ import 'package:todolist_app_tekber10/providers/profile_provider.dart';
 import 'package:todolist_app_tekber10/providers/theme_provider.dart';
 import 'package:todolist_app_tekber10/screens/home_screen.dart';
 
+<<<<<<< HEAD
 import '../helpers/fake_task_provider.dart';
 
+=======
+>>>>>>> b8e6196 (feat: add flutter test coverage to both script dev and prod (#28))
 Widget buildTestApp({TaskProvider? taskProvider}) {
   return MultiProvider(
     providers: [
@@ -167,6 +170,7 @@ void main() {
       expect(find.text('Ongoing Task'), findsOneWidget);
       expect(find.text('Completed Task'), findsNothing);
     });
+<<<<<<< HEAD
 
     testWidgets('tapping Completed tab filters to completed tasks', (tester) async {
       final taskProvider = TaskProvider();
@@ -546,5 +550,7 @@ void main() {
       // Provider's addTask fails → home_screen catch block shows snackbar
       expect(find.textContaining('Failed to add task'), findsOneWidget);
     });
+=======
+>>>>>>> b8e6196 (feat: add flutter test coverage to both script dev and prod (#28))
   });
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+<<<<<<< HEAD
 import 'package:provider/provider.dart';
 import 'package:todolist_app_tekber10/screens/signup_screen.dart';
 
@@ -7,6 +8,10 @@ class _DummyTaskProvider with ChangeNotifier {}
 
 class _DummyProfileProvider with ChangeNotifier {}
 
+=======
+import 'package:todolist_app_tekber10/screens/signup_screen.dart';
+
+>>>>>>> b8e6196 (feat: add flutter test coverage to both script dev and prod (#28))
 Widget buildTestApp({bool fromOnboarding = false}) {
   return MaterialApp(home: SignUpScreen(fromOnboarding: fromOnboarding));
 }
@@ -127,6 +132,7 @@ void main() {
         await tapSignUpButton(tester);
         expect(find.text('Password tidak cocok'), findsOneWidget);
       });
+<<<<<<< HEAD
 
       testWidgets('valid signup attempts Supabase signUp (which fails)',
           (tester) async {
@@ -269,3 +275,8 @@ void main() {
 class SignUpScreenImports {
   // Just to silence unused import lint if SignInScreen reference is needed.
 }
+=======
+    });
+  });
+}
+>>>>>>> b8e6196 (feat: add flutter test coverage to both script dev and prod (#28))
