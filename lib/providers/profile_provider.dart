@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/user_profile.dart';
 import '../services/supabase_service.dart';
@@ -8,6 +9,40 @@ class ProfileProvider with ChangeNotifier {
 
   UserProfile get profile => _profile;
   bool get isLoading => _isLoading;
+
+  /// Override for tests — bypasses Supabase auth check when set.
+  @visibleForTesting
+  String? testUserIdOverride;
+
+  @visibleForTesting
+  String? testUserEmailOverride;
+
+  String? get _currentUserId {
+    if (testUserIdOverride != null) return testUserIdOverride;
+    try {
+      return supabase.auth.currentUser?.id;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  String? get _currentUserEmail {
+    if (testUserEmailOverride != null) return testUserEmailOverride;
+    try {
+      return supabase.auth.currentUser?.email;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Derives a default username from the current user's email (the part
+  /// before '@'). Falls back to 'User' when no email is available.
+  ///
+  /// Public so tests can verify the derivation without going through HTTP.
+  @visibleForTesting
+  String resolveDefaultUsername() {
+    return _currentUserEmail?.split('@')[0] ?? 'User';
+  }
 
   // Clear profile (for logout)
   void clearProfile() {
@@ -21,22 +56,20 @@ class ProfileProvider with ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final currentUser = supabase.auth.currentUser;
-      if (currentUser == null) {
+      final userId = _currentUserId;
+      if (userId == null) {
         throw Exception('User not logged in');
       }
 
       final response = await supabase
           .from('profiles')
           .select()
-          .eq('id', currentUser.id)
+          .eq('id', userId)
           .maybeSingle();
 
       if (response != null) {
         _profile = UserProfile(
-          name: response['username'] ??
-              currentUser.email?.split('@')[0] ??
-              'User',
+          name: response['username'] ?? resolveDefaultUsername(),
           photoPath: response['photo_url'],
           age: response['age'],
         );
@@ -57,14 +90,14 @@ class ProfileProvider with ChangeNotifier {
 
   // Create new profile
   Future<void> _createProfile() async {
-    final currentUser = supabase.auth.currentUser;
-    if (currentUser == null) return;
+    final userId = _currentUserId;
+    if (userId == null) return;
 
     try {
-      final username = currentUser.email?.split('@')[0] ?? 'User';
+      final username = resolveDefaultUsername();
 
       await supabase.from('profiles').insert({
-        'id': currentUser.id,
+        'id': userId,
         'username': username,
         'age': null,
         'photo_url': null,
@@ -79,8 +112,8 @@ class ProfileProvider with ChangeNotifier {
   // Update profile
   Future<void> updateProfile(String name, int? age, String? photoPath) async {
     try {
-      final currentUser = supabase.auth.currentUser;
-      if (currentUser == null) {
+      final userId = _currentUserId;
+      if (userId == null) {
         throw Exception('User not logged in');
       }
 
@@ -91,7 +124,7 @@ class ProfileProvider with ChangeNotifier {
       }
 
       await supabase.from('profiles').upsert({
-        'id': currentUser.id,
+        'id': userId,
         'username': name,
         'age': age,
         'photo_url': photoPath,

@@ -157,5 +157,61 @@ void main() {
       await tester.pump();
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
     });
+
+    testWidgets('tapping back button pops the route', (tester) async {
+      final provider = ThemeProvider();
+      await tester.pumpWidget(
+        ChangeNotifierProvider.value(
+          value: provider,
+          child: MaterialApp(
+            home: Builder(
+              builder: (ctx) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).push(
+                    MaterialPageRoute(
+                      builder: (_) => const ThemeSettingsScreen(),
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Settings'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Open'), findsOneWidget);
+    });
+
+    testWidgets('demo Elevated, Filled, Outlined buttons are tappable',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 2000));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final provider = ThemeProvider();
+      await tester.pumpWidget(buildTestApp(provider));
+      await tester.pump();
+
+      // Scroll to the demo buttons.
+      await tester.dragUntilVisible(
+        find.text('Elevated'),
+        find.byType(ListView),
+        const Offset(0, -100),
+      );
+
+      await tester.tap(find.text('Elevated'));
+      await tester.pump();
+      await tester.tap(find.text('Filled'));
+      await tester.pump();
+      await tester.tap(find.text('Outlined'));
+      await tester.pump();
+    });
   });
 }
