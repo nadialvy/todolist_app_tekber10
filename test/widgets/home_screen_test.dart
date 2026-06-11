@@ -36,7 +36,7 @@ void main() {
     testWidgets('should render search bar hint text', (tester) async {
       await tester.pumpWidget(buildTestApp());
       await tester.pump();
-      expect(find.text('Search New Task Here'), findsOneWidget);
+      expect(find.text('Search Task'), findsOneWidget);
     });
 
     testWidgets('should render All filter tab', (tester) async {
