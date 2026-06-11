@@ -2,6 +2,27 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:todolist_app_tekber10/models/task.dart';
 import 'package:todolist_app_tekber10/providers/task_provider.dart';
 
+Task _makeTask({
+  required String id,
+  required String title,
+  required TaskStatus status,
+  required DateTime deadline,
+  TaskPriority priority = TaskPriority.medium,
+  DateTime? completedAt,
+  DateTime? createdAt,
+}) {
+  return Task(
+    id: id,
+    title: title,
+    description: '',
+    deadline: deadline,
+    status: status,
+    priority: priority,
+    createdAt: createdAt ?? DateTime.now().subtract(const Duration(days: 1)),
+    completedAt: completedAt,
+  );
+}
+
 void main() {
   group('WeeklyStats', () {
     test('should create WeeklyStats with correct values', () {
@@ -606,6 +627,191 @@ void main() {
       expect(provider.missedTasks[0].status, TaskStatus.missed);
       expect(provider.missedTasks[0].priority, TaskPriority.medium);
       expect(provider.missedTasks[0].title, 'Missed Medium Priority');
+    });
+  });
+
+  group('TaskProvider clearTasks', () {
+    test('should remove all tasks', () {
+      final provider = TaskProvider();
+      final now = DateTime.now();
+
+      provider.setTasksForTesting([
+        _makeTask(id: '1', title: 'Task A', status: TaskStatus.ongoing, deadline: now.add(const Duration(days: 1))),
+        _makeTask(id: '2', title: 'Task B', status: TaskStatus.completed, deadline: now),
+      ]);
+
+      expect(provider.allTasks.length, 2);
+
+      provider.clearTasks();
+
+      expect(provider.allTasks, isEmpty);
+      expect(provider.ongoingTasks, isEmpty);
+      expect(provider.completedTasks, isEmpty);
+      expect(provider.missedTasks, isEmpty);
+    });
+
+    test('should be safe to call when already empty', () {
+      final provider = TaskProvider();
+      provider.clearTasks();
+      expect(provider.allTasks, isEmpty);
+    });
+  });
+
+  group('TaskProvider allTasks auto-update status', () {
+    test('should auto-update ongoing task past deadline to missed', () {
+      final provider = TaskProvider();
+
+      provider.setTasksForTesting([
+        Task(
+          id: 'overdue',
+          title: 'Overdue Task',
+          description: '',
+          deadline: DateTime.now().subtract(const Duration(hours: 1)),
+          status: TaskStatus.ongoing,
+          createdAt: DateTime.now().subtract(const Duration(days: 2)),
+        ),
+      ]);
+
+      final tasks = provider.allTasks;
+      expect(tasks[0].status, TaskStatus.missed);
+    });
+
+    test('should not change status of completed task past deadline', () {
+      final provider = TaskProvider();
+
+      provider.setTasksForTesting([
+        Task(
+          id: 'completed',
+          title: 'Done Task',
+          description: '',
+          deadline: DateTime.now().subtract(const Duration(days: 1)),
+          status: TaskStatus.completed,
+          createdAt: DateTime.now().subtract(const Duration(days: 5)),
+        ),
+      ]);
+
+      final tasks = provider.allTasks;
+      expect(tasks[0].status, TaskStatus.completed);
+    });
+
+    test('should not change status of ongoing task with future deadline', () {
+      final provider = TaskProvider();
+
+      provider.setTasksForTesting([
+        Task(
+          id: 'future',
+          title: 'Future Task',
+          description: '',
+          deadline: DateTime.now().add(const Duration(days: 7)),
+          status: TaskStatus.ongoing,
+          createdAt: DateTime.now(),
+        ),
+      ]);
+
+      final tasks = provider.allTasks;
+      expect(tasks[0].status, TaskStatus.ongoing);
+    });
+  });
+
+  group('TaskProvider getWeeklyStats', () {
+    test('should return default stats when no tasks exist', () {
+      final provider = TaskProvider();
+      final stats = provider.getWeeklyStats();
+
+      expect(stats.dailyCounts.length, 7);
+      expect(stats.dailyCounts.every((c) => c == 0), true);
+      expect(stats.progress, 0.0);
+      expect(stats.maxCount, 1);
+    });
+
+    test('should not count ongoing or missed tasks', () {
+      final provider = TaskProvider();
+      final now = DateTime.now();
+
+      provider.setTasksForTesting([
+        _makeTask(id: '1', title: 'Ongoing', status: TaskStatus.ongoing, deadline: now.add(const Duration(days: 1)), createdAt: now),
+        _makeTask(id: '2', title: 'Missed', status: TaskStatus.missed, deadline: now.subtract(const Duration(days: 1)), createdAt: now),
+      ]);
+
+      final stats = provider.getWeeklyStats();
+      expect(stats.dailyCounts.every((c) => c == 0), true);
+      expect(stats.progress, 0.0);
+    });
+
+    test('should return progress 100 when current week has completed tasks and last week had none', () {
+      final provider = TaskProvider();
+      final now = DateTime.now();
+
+      provider.setTasksForTesting([
+        Task(
+          id: '1',
+          title: 'Completed This Week',
+          description: '',
+          deadline: now.add(const Duration(days: 1)),
+          status: TaskStatus.completed,
+          createdAt: now,
+        ),
+      ]);
+
+      final stats = provider.getWeeklyStats();
+      expect(stats.progress, 100.0);
+    });
+
+    test('should count completed tasks in correct day slot', () {
+      final provider = TaskProvider();
+      final now = DateTime.now();
+
+      provider.setTasksForTesting([
+        Task(id: '1', title: 'T1', description: '', deadline: now.add(const Duration(days: 1)), status: TaskStatus.completed, createdAt: now),
+        Task(id: '2', title: 'T2', description: '', deadline: now.add(const Duration(days: 1)), status: TaskStatus.completed, createdAt: now),
+      ]);
+
+      final stats = provider.getWeeklyStats();
+      final todayIndex = now.weekday - 1;
+      expect(stats.dailyCounts[todayIndex], 2);
+      expect(stats.maxCount, 2);
+    });
+
+    test('should calculate negative progress when fewer tasks than last week', () {
+      final provider = TaskProvider();
+      final now = DateTime.now();
+
+      // Get a date that is safely in the previous ISO week
+      final today = DateTime(now.year, now.month, now.day);
+      final startOfCurrentWeek = today.subtract(Duration(days: now.weekday - 1));
+      final prevWeekDate = startOfCurrentWeek.subtract(const Duration(days: 3));
+
+      provider.setTasksForTesting([
+        Task(id: '1', title: 'PW1', description: '', deadline: prevWeekDate, status: TaskStatus.completed, createdAt: prevWeekDate),
+        Task(id: '2', title: 'PW2', description: '', deadline: prevWeekDate, status: TaskStatus.completed, createdAt: prevWeekDate),
+      ]);
+
+      final stats = provider.getWeeklyStats();
+      expect(stats.progress, -100.0);
+    });
+
+    test('should calculate positive progress when more tasks this week than last', () {
+      final provider = TaskProvider();
+      final now = DateTime.now();
+
+      final today = DateTime(now.year, now.month, now.day);
+      final startOfCurrentWeek = today.subtract(Duration(days: now.weekday - 1));
+      final prevWeekDate = startOfCurrentWeek.subtract(const Duration(days: 3));
+
+      provider.setTasksForTesting([
+        Task(id: 'cw1', title: 'CW1', description: '', deadline: now.add(const Duration(days: 1)), status: TaskStatus.completed, createdAt: now),
+        Task(id: 'cw2', title: 'CW2', description: '', deadline: now.add(const Duration(days: 1)), status: TaskStatus.completed, createdAt: now),
+        Task(id: 'pw1', title: 'PW1', description: '', deadline: prevWeekDate, status: TaskStatus.completed, createdAt: prevWeekDate),
+      ]);
+
+      final stats = provider.getWeeklyStats();
+      expect(stats.progress, 100.0); // (2-1)/1 * 100 = 100%
+    });
+
+    test('maxCount should always be at least 1', () {
+      final provider = TaskProvider();
+      final stats = provider.getWeeklyStats();
+      expect(stats.maxCount, greaterThanOrEqualTo(1));
     });
   });
 }
