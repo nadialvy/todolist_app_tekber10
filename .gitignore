@@ -49,3 +49,8 @@ app.*.map.json
 
 # Claude Code
 .claude/
+
+# Terraform assets
+**/.terraform/
+*.tfstate
+*.tfstate.*

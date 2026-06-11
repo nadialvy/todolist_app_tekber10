@@ -953,7 +953,7 @@ void main() {
 
       test('deleteTasks with empty list completes without throwing', () async {
         final provider = TaskProvider();
-        // Empty list — loop body never runs, no Supabase call needed.
+        // Empty list - loop body never runs, no Supabase call needed.
         await provider.deleteTasks([]);
         expect(provider.isLoading, false);
       });
@@ -1096,7 +1096,7 @@ void main() {
 
     test('uses fallback deadline when due_date is null', () {
       final task = TaskProvider.taskFromSupabaseJson(baseJson(dueDate: null));
-      // Fallback adds 1 day to "now" — verify it's in the future.
+      // Fallback adds 1 day to "now" : verify it's in the future.
       expect(task.deadline.isAfter(DateTime.now()), true);
     });
 
