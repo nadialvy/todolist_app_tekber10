@@ -170,8 +170,9 @@ void main() {
       await tester.pumpWidget(buildTestApp(task: makeSampleTask()));
       await tester.pump();
 
-      expect(find.byType(ElevatedButton), findsOneWidget);
+      // Save button label + icon are reliable across Flutter versions.
       expect(find.byIcon(Icons.save), findsOneWidget);
+      expect(find.text('Update Task'), findsOneWidget);
     });
 
     testWidgets('Deadline field is rendered as ListTile', (tester) async {
