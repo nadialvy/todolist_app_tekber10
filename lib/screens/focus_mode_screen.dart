@@ -200,13 +200,21 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
 
     if (confirmed == true && mounted) {
       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-      await taskProvider.markAsCompleted(widget.task.id);
+      try {
+        await taskProvider.markAsCompleted(widget.task.id);
 
-      if (mounted) {
-        Navigator.of(context).pop();
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Task completed! 🎉'),
-            backgroundColor: AppColors.statusCompleted));
+        if (mounted) {
+          Navigator.of(context).pop();
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+              content: Text('Task completed! 🎉'),
+              backgroundColor: AppColors.statusCompleted));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to complete task: $e')),
+          );
+        }
       }
     }
   }
@@ -878,15 +886,25 @@ class _FocusModeScreenState extends State<FocusModeScreen> {
                         if (confirmed == true && context.mounted) {
                           final taskProvider =
                               Provider.of<TaskProvider>(context, listen: false);
-                          await taskProvider.deleteTask(widget.task.id);
-                          if (context.mounted) {
-                            Navigator.of(context).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Task deleted'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
+                          try {
+                            await taskProvider.deleteTask(widget.task.id);
+                            if (context.mounted) {
+                              Navigator.of(context).pop();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Task deleted'),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Failed to delete task: $e'),
+                                ),
+                              );
+                            }
                           }
                         }
                       },

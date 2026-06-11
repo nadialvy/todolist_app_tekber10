@@ -91,16 +91,24 @@ class _HomeScreenState extends State<HomeScreen> {
 
     if (task != null && mounted) {
       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
-      final createdTask = await taskProvider.addTask(task);
+      try {
+        final createdTask = await taskProvider.addTask(task);
 
-      // Show success modal
-      if (!mounted) return;
-      final shouldCheckTask = await SuccessModal.show(context);
+        // Show success modal
+        if (!mounted) return;
+        final shouldCheckTask = await SuccessModal.show(context);
 
-      if (shouldCheckTask == true && mounted) {
-        // Navigate to focus mode
-        Navigator.of(context).push(MaterialPageRoute(
-            builder: (context) => FocusModeScreen(task: createdTask)));
+        if (shouldCheckTask == true && mounted) {
+          // Navigate to focus mode
+          Navigator.of(context).push(MaterialPageRoute(
+              builder: (context) => FocusModeScreen(task: createdTask)));
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to add task: $e')),
+          );
+        }
       }
     }
   }
