@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:todolist_app_tekber10/models/task.dart';
-import 'package:todolist_app_tekber10/models/user_profile.dart';
 import 'package:todolist_app_tekber10/providers/task_provider.dart';
 import 'package:todolist_app_tekber10/providers/profile_provider.dart';
 import 'package:todolist_app_tekber10/providers/theme_provider.dart';
