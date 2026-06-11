@@ -17,11 +17,32 @@ class ProfileProvider with ChangeNotifier {
   @visibleForTesting
   String? testUserEmailOverride;
 
-  String? get _currentUserId =>
-      testUserIdOverride ?? supabase.auth.currentUser?.id;
+  String? get _currentUserId {
+    if (testUserIdOverride != null) return testUserIdOverride;
+    try {
+      return supabase.auth.currentUser?.id;
+    } catch (_) {
+      return null;
+    }
+  }
 
-  String? get _currentUserEmail =>
-      testUserEmailOverride ?? supabase.auth.currentUser?.email;
+  String? get _currentUserEmail {
+    if (testUserEmailOverride != null) return testUserEmailOverride;
+    try {
+      return supabase.auth.currentUser?.email;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Derives a default username from the current user's email (the part
+  /// before '@'). Falls back to 'User' when no email is available.
+  ///
+  /// Public so tests can verify the derivation without going through HTTP.
+  @visibleForTesting
+  String resolveDefaultUsername() {
+    return _currentUserEmail?.split('@')[0] ?? 'User';
+  }
 
   // Clear profile (for logout)
   void clearProfile() {
@@ -48,9 +69,7 @@ class ProfileProvider with ChangeNotifier {
 
       if (response != null) {
         _profile = UserProfile(
-          name: response['username'] ??
-              _currentUserEmail?.split('@')[0] ??
-              'User',
+          name: response['username'] ?? resolveDefaultUsername(),
           photoPath: response['photo_url'],
           age: response['age'],
         );
@@ -75,7 +94,7 @@ class ProfileProvider with ChangeNotifier {
     if (userId == null) return;
 
     try {
-      final username = _currentUserEmail?.split('@')[0] ?? 'User';
+      final username = resolveDefaultUsername();
 
       await supabase.from('profiles').insert({
         'id': userId,

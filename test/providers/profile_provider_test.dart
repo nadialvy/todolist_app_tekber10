@@ -74,5 +74,33 @@ void main() {
       expect(profile.age, 25);
       expect(profile.photoPath, '/new/path');
     });
+
+    group('resolveDefaultUsername', () {
+      test('returns "User" when no email available', () {
+        final provider = ProfileProvider();
+        expect(provider.resolveDefaultUsername(), 'User');
+      });
+
+      test('returns email local-part when override is set', () {
+        final provider = ProfileProvider();
+        provider.testUserEmailOverride = 'alice.smith@example.com';
+        expect(provider.resolveDefaultUsername(), 'alice.smith');
+      });
+
+      test('returns "User" for empty email string', () {
+        final provider = ProfileProvider();
+        provider.testUserEmailOverride = '';
+        // Empty string split returns [''] — first element is '' which is
+        // truthy by `??`, so returns ''.
+        expect(provider.resolveDefaultUsername(), '');
+      });
+
+      test('handles email without @ symbol gracefully', () {
+        final provider = ProfileProvider();
+        provider.testUserEmailOverride = 'noatsymbol';
+        // split returns ['noatsymbol'] → first element is 'noatsymbol'.
+        expect(provider.resolveDefaultUsername(), 'noatsymbol');
+      });
+    });
   });
 }

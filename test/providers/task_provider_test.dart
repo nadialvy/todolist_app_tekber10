@@ -988,6 +988,52 @@ void main() {
     });
   });
 
+  group('applyUpdatedTaskLocally', () {
+    Task makeTaskFor({
+      required String id,
+      String title = 'T',
+      TaskStatus status = TaskStatus.ongoing,
+    }) {
+      return Task(
+        id: id,
+        title: title,
+        description: '',
+        deadline: DateTime.now().add(const Duration(days: 1)),
+        status: status,
+        createdAt: DateTime.now(),
+      );
+    }
+
+    test('replaces task in-place when id matches', () {
+      final provider = TaskProvider();
+      provider.setTasksForTesting([
+        makeTaskFor(id: 'a', title: 'Original A'),
+        makeTaskFor(id: 'b', title: 'Original B'),
+      ]);
+
+      final updated = makeTaskFor(id: 'a', title: 'Updated A');
+      provider.applyUpdatedTaskLocally('a', updated);
+
+      expect(provider.allTasks.firstWhere((t) => t.id == 'a').title,
+          'Updated A');
+      expect(provider.allTasks.firstWhere((t) => t.id == 'b').title,
+          'Original B');
+    });
+
+    test('no-op when id is not found', () {
+      final provider = TaskProvider();
+      provider.setTasksForTesting([
+        makeTaskFor(id: 'a', title: 'Original A'),
+      ]);
+
+      final phantom = makeTaskFor(id: 'missing', title: 'Phantom');
+      provider.applyUpdatedTaskLocally('missing', phantom);
+
+      expect(provider.allTasks.length, 1);
+      expect(provider.allTasks.first.title, 'Original A');
+    });
+  });
+
   group('taskFromSupabaseJson', () {
     Map<String, dynamic> baseJson({
       String status = 'ongoing',

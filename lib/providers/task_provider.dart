@@ -14,8 +14,14 @@ class TaskProvider with ChangeNotifier {
   @visibleForTesting
   String? testUserIdOverride;
 
-  String? get _currentUserId =>
-      testUserIdOverride ?? supabase.auth.currentUser?.id;
+  String? get _currentUserId {
+    if (testUserIdOverride != null) return testUserIdOverride;
+    try {
+      return supabase.auth.currentUser?.id;
+    } catch (_) {
+      return null;
+    }
+  }
 
   List<Task> get allTasks {
     // Update status for all tasks
@@ -39,6 +45,16 @@ class TaskProvider with ChangeNotifier {
   void setTasksForTesting(List<Task> tasks) {
     _tasks = tasks;
     notifyListeners();
+  }
+
+  /// Replaces the in-memory task with [updatedTask] when one matches [id].
+  /// Extracted so the post-HTTP update logic is unit-testable.
+  @visibleForTesting
+  void applyUpdatedTaskLocally(String id, Task updatedTask) {
+    final index = _tasks.indexWhere((task) => task.id == id);
+    if (index != -1) {
+      _tasks[index] = updatedTask;
+    }
   }
 
   // Add task
@@ -167,10 +183,7 @@ class TaskProvider with ChangeNotifier {
 
       await supabase.from('notes').update(taskData).eq('id', id);
 
-      final index = _tasks.indexWhere((task) => task.id == id);
-      if (index != -1) {
-        _tasks[index] = updatedTask;
-      }
+      applyUpdatedTaskLocally(id, updatedTask);
       _isLoading = false;
       notifyListeners();
     } catch (e) {

@@ -5,6 +5,8 @@ import 'package:todolist_app_tekber10/models/task.dart';
 import 'package:todolist_app_tekber10/providers/task_provider.dart';
 import 'package:todolist_app_tekber10/screens/add_edit_task_screen.dart';
 
+import '../helpers/fake_task_provider.dart';
+
 Widget buildTestApp({Task? task}) {
   return ChangeNotifierProvider(
     create: (_) => TaskProvider(),
@@ -229,6 +231,79 @@ void main() {
 
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
+    });
+
+    testWidgets('saving valid new task with fake provider pops the route',
+        (tester) async {
+      final fake = FakeTaskProvider();
+      await tester.pumpWidget(
+        ChangeNotifierProvider<TaskProvider>.value(
+          value: fake,
+          child: MaterialApp(
+            home: Builder(
+              builder: (ctx) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).push(
+                    MaterialPageRoute(
+                      builder: (_) => const AddEditTaskScreen(),
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).first, 'My Task');
+      await tester.enterText(
+          find.byType(TextFormField).at(1), 'My Description');
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.check));
+      await tester.pumpAndSettle();
+
+      // Route popped because save succeeded
+      expect(find.text('Open'), findsOneWidget);
+    });
+
+    testWidgets('saving valid edit with fake provider pops the route',
+        (tester) async {
+      final fake = FakeTaskProvider();
+      final task = makeSampleTask();
+      fake.setTasksForTesting([task]);
+
+      await tester.pumpWidget(
+        ChangeNotifierProvider<TaskProvider>.value(
+          value: fake,
+          child: MaterialApp(
+            home: Builder(
+              builder: (ctx) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).push(
+                    MaterialPageRoute(
+                      builder: (_) => AddEditTaskScreen(task: task),
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.check));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Open'), findsOneWidget);
     });
 
     testWidgets('selecting OK on date picker opens time picker', (tester) async {

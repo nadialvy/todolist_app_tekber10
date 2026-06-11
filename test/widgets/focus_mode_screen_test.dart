@@ -7,6 +7,8 @@ import 'package:todolist_app_tekber10/providers/task_provider.dart';
 import 'package:todolist_app_tekber10/providers/theme_provider.dart';
 import 'package:todolist_app_tekber10/screens/focus_mode_screen.dart';
 
+import '../helpers/fake_task_provider.dart';
+
 Task makeTask({
   String id = '1',
   String title = 'Test Task',
@@ -549,6 +551,96 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.textContaining('Failed to delete task'), findsOneWidget);
+    });
+
+    testWidgets('confirming Complete with fake provider pops and shows success snackbar',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final task = makeTask();
+      final fake = FakeTaskProvider();
+      fake.setTasksForTesting([task]);
+
+      // Push focus mode via a host so Navigator.pop has somewhere to go.
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<TaskProvider>.value(value: fake),
+            ChangeNotifierProvider(create: (_) => ThemeProvider()),
+          ],
+          child: MaterialApp(
+            home: Builder(
+              builder: (ctx) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).push(
+                    MaterialPageRoute(
+                      builder: (_) => FocusModeScreen(task: task),
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Finish Steps to Complete'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Complete'));
+      await tester.pumpAndSettle();
+
+      // Route popped + success SnackBar shown
+      expect(find.text('Open'), findsOneWidget);
+      expect(find.text('Task completed! 🎉'), findsOneWidget);
+    });
+
+    testWidgets('confirming Delete with fake provider pops and shows deleted snackbar',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1600));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final task = makeTask();
+      final fake = FakeTaskProvider();
+      fake.setTasksForTesting([task]);
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<TaskProvider>.value(value: fake),
+            ChangeNotifierProvider(create: (_) => ThemeProvider()),
+          ],
+          child: MaterialApp(
+            home: Builder(
+              builder: (ctx) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).push(
+                    MaterialPageRoute(
+                      builder: (_) => FocusModeScreen(task: task),
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Delete Task'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Open'), findsOneWidget);
+      expect(find.text('Task deleted'), findsOneWidget);
     });
 
     testWidgets('timer reaches 0 and shows complete dialog', (tester) async {

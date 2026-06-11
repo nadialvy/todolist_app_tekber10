@@ -8,6 +8,8 @@ import 'package:todolist_app_tekber10/providers/profile_provider.dart';
 import 'package:todolist_app_tekber10/providers/theme_provider.dart';
 import 'package:todolist_app_tekber10/screens/home_screen.dart';
 
+import '../helpers/fake_task_provider.dart';
+
 Widget buildTestApp({TaskProvider? taskProvider}) {
   return MultiProvider(
     providers: [
@@ -384,7 +386,128 @@ void main() {
       expect(find.text('Add new task'), findsAtLeastNWidgets(1));
     });
 
-    testWidgets('add task flow: submit returns Task → provider.addTask fails → snackbar',
+    testWidgets('add task flow: submit returns Task → fake provider success → SuccessModal shows',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final fake = FakeTaskProvider();
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<TaskProvider>.value(value: fake),
+            ChangeNotifierProvider(create: (_) => ProfileProvider()),
+            ChangeNotifierProvider(create: (_) => ThemeProvider()),
+          ],
+          child: Builder(
+            builder: (context) {
+              final theme = Provider.of<ThemeProvider>(context);
+              return MaterialApp(
+                theme: theme.lightTheme,
+                home: const HomeScreen(),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // Open bottom sheet
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pumpAndSettle();
+
+      // Fill title
+      await tester.enterText(find.byType(TextFormField).first, 'Quick task');
+      await tester.pump();
+
+      // Pick due date
+      final dueInk = find
+          .ancestor(
+            of: find.text('dd/mm/yy').last,
+            matching: find.byType(InkWell),
+          )
+          .first;
+      await tester.ensureVisible(dueInk);
+      await tester.pumpAndSettle();
+      await tester.tap(dueInk);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      // Submit
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Add new task'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+
+      // SuccessModal is shown after fake addTask succeeds
+      expect(find.text('New task Added'), findsOneWidget);
+
+      // Tap Back to home — closes modal, no navigation
+      await tester.tap(find.text('Back to home'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New task Added'), findsNothing);
+    });
+
+    testWidgets('add task flow: tap Check task navigates to FocusModeScreen',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      final fake = FakeTaskProvider();
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<TaskProvider>.value(value: fake),
+            ChangeNotifierProvider(create: (_) => ProfileProvider()),
+            ChangeNotifierProvider(create: (_) => ThemeProvider()),
+          ],
+          child: Builder(
+            builder: (context) {
+              final theme = Provider.of<ThemeProvider>(context);
+              return MaterialApp(
+                theme: theme.lightTheme,
+                home: const HomeScreen(),
+              );
+            },
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.add));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).first, 'Focus me');
+      await tester.pump();
+
+      final dueInk = find
+          .ancestor(
+            of: find.text('dd/mm/yy').last,
+            matching: find.byType(InkWell),
+          )
+          .first;
+      await tester.ensureVisible(dueInk);
+      await tester.pumpAndSettle();
+      await tester.tap(dueInk);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Add new task'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      await tester.pumpAndSettle();
+
+      // Tap Check task on the success modal — navigates to FocusModeScreen
+      await tester.tap(find.text('Check task'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Task details'), findsOneWidget);
+    });
+
+    testWidgets('add task flow with failing provider shows error snackbar',
         (tester) async {
       await tester.binding.setSurfaceSize(const Size(800, 1200));
       addTearDown(() => tester.binding.setSurfaceSize(null));
