@@ -814,4 +814,322 @@ void main() {
       expect(stats.maxCount, greaterThanOrEqualTo(1));
     });
   });
+
+  group('TaskProvider isLoading getter', () {
+    test('isLoading is initially false', () {
+      final provider = TaskProvider();
+      expect(provider.isLoading, false);
+    });
+  });
+
+  group('TaskProvider Supabase-backed methods error paths', () {
+    // These methods exercise the enum-to-string switches before hitting
+    // Supabase (uninitialized in tests), which then throws and is caught.
+
+    Task makeTask({
+      TaskStatus status = TaskStatus.ongoing,
+      TaskPriority priority = TaskPriority.medium,
+    }) {
+      return Task(
+        id: 'test-id',
+        title: 'Test Task',
+        description: 'desc',
+        deadline: DateTime.now().add(const Duration(days: 1)),
+        status: status,
+        priority: priority,
+        createdAt: DateTime.now(),
+        startDate: DateTime.now(),
+      );
+    }
+
+    group('addTask', () {
+      test('addTask throws when Supabase is not initialized (ongoing/low)',
+          () async {
+        final provider = TaskProvider();
+        expect(
+          () => provider.addTask(
+              makeTask(status: TaskStatus.ongoing, priority: TaskPriority.low)),
+          throwsA(anything),
+        );
+      });
+
+      test('addTask throws (completed/medium)', () async {
+        final provider = TaskProvider();
+        expect(
+          () => provider.addTask(makeTask(
+              status: TaskStatus.completed, priority: TaskPriority.medium)),
+          throwsA(anything),
+        );
+      });
+
+      test('addTask throws (missed/high)', () async {
+        final provider = TaskProvider();
+        expect(
+          () => provider.addTask(
+              makeTask(status: TaskStatus.missed, priority: TaskPriority.high)),
+          throwsA(anything),
+        );
+      });
+
+      test('addTask resets isLoading to false after error', () async {
+        final provider = TaskProvider();
+        try {
+          await provider.addTask(makeTask());
+        } catch (_) {}
+        expect(provider.isLoading, false);
+      });
+    });
+
+    group('updateTask', () {
+      test('updateTask throws (ongoing/low)', () async {
+        final provider = TaskProvider();
+        expect(
+          () => provider.updateTask(
+              'some-id',
+              makeTask(
+                  status: TaskStatus.ongoing, priority: TaskPriority.low)),
+          throwsA(anything),
+        );
+      });
+
+      test('updateTask throws (completed/medium)', () async {
+        final provider = TaskProvider();
+        expect(
+          () => provider.updateTask(
+              'some-id',
+              makeTask(
+                  status: TaskStatus.completed,
+                  priority: TaskPriority.medium)),
+          throwsA(anything),
+        );
+      });
+
+      test('updateTask throws (missed/high)', () async {
+        final provider = TaskProvider();
+        expect(
+          () => provider.updateTask(
+              'some-id',
+              makeTask(
+                  status: TaskStatus.missed, priority: TaskPriority.high)),
+          throwsA(anything),
+        );
+      });
+
+      test('updateTask resets isLoading to false after error', () async {
+        final provider = TaskProvider();
+        try {
+          await provider.updateTask('id', makeTask());
+        } catch (_) {}
+        expect(provider.isLoading, false);
+      });
+    });
+
+    group('deleteTask', () {
+      test('deleteTask throws when Supabase is not initialized', () async {
+        final provider = TaskProvider();
+        expect(
+          () => provider.deleteTask('some-id'),
+          throwsA(anything),
+        );
+      });
+
+      test('deleteTask resets isLoading to false after error', () async {
+        final provider = TaskProvider();
+        try {
+          await provider.deleteTask('id');
+        } catch (_) {}
+        expect(provider.isLoading, false);
+      });
+    });
+
+    group('deleteTasks', () {
+      test('deleteTasks throws when Supabase is not initialized', () async {
+        final provider = TaskProvider();
+        expect(
+          () => provider.deleteTasks(['id-1', 'id-2']),
+          throwsA(anything),
+        );
+      });
+
+      test('deleteTasks with empty list completes without throwing', () async {
+        final provider = TaskProvider();
+        // Empty list — loop body never runs, no Supabase call needed.
+        await provider.deleteTasks([]);
+        expect(provider.isLoading, false);
+      });
+    });
+
+    group('markAsCompleted', () {
+      test('markAsCompleted throws when Supabase is not initialized', () async {
+        final provider = TaskProvider();
+        expect(
+          () => provider.markAsCompleted('some-id'),
+          throwsA(anything),
+        );
+      });
+
+      test('markAsCompleted resets isLoading to false after error', () async {
+        final provider = TaskProvider();
+        try {
+          await provider.markAsCompleted('id');
+        } catch (_) {}
+        expect(provider.isLoading, false);
+      });
+    });
+
+    group('loadTasks', () {
+      test('loadTasks completes (catches error) when Supabase is not initialized',
+          () async {
+        final provider = TaskProvider();
+        // loadTasks catches and logs without rethrowing.
+        await provider.loadTasks();
+        expect(provider.isLoading, false);
+      });
+    });
+  });
+
+  group('taskFromSupabaseJson', () {
+    Map<String, dynamic> baseJson({
+      String status = 'ongoing',
+      String priority = 'medium',
+      String? dueDate = '2026-12-31',
+      String? startDate,
+      dynamic steps,
+      String? description = 'desc',
+    }) {
+      return {
+        'id': 'json-1',
+        'title': 'Test',
+        'description': description,
+        'status': status,
+        'priority': priority,
+        'due_date': dueDate,
+        'start_date': startDate,
+        'created_at': '2026-01-01T00:00:00Z',
+        'steps': steps,
+      };
+    }
+
+    test('maps all status values', () {
+      expect(
+        TaskProvider.taskFromSupabaseJson(baseJson(status: 'ongoing')).status,
+        TaskStatus.ongoing,
+      );
+      expect(
+        TaskProvider.taskFromSupabaseJson(baseJson(status: 'completed')).status,
+        TaskStatus.completed,
+      );
+      expect(
+        TaskProvider.taskFromSupabaseJson(baseJson(status: 'missed')).status,
+        TaskStatus.missed,
+      );
+      expect(
+        TaskProvider.taskFromSupabaseJson(baseJson(status: 'bogus')).status,
+        TaskStatus.ongoing,
+      );
+    });
+
+    test('maps all priority values', () {
+      expect(
+        TaskProvider.taskFromSupabaseJson(baseJson(priority: 'low')).priority,
+        TaskPriority.low,
+      );
+      expect(
+        TaskProvider.taskFromSupabaseJson(baseJson(priority: 'medium')).priority,
+        TaskPriority.medium,
+      );
+      expect(
+        TaskProvider.taskFromSupabaseJson(baseJson(priority: 'high')).priority,
+        TaskPriority.high,
+      );
+      expect(
+        TaskProvider.taskFromSupabaseJson(baseJson(priority: 'bogus')).priority,
+        TaskPriority.medium,
+      );
+    });
+
+    test('uses fallback deadline when due_date is null', () {
+      final task = TaskProvider.taskFromSupabaseJson(baseJson(dueDate: null));
+      // Fallback adds 1 day to "now" — verify it's in the future.
+      expect(task.deadline.isAfter(DateTime.now()), true);
+    });
+
+    test('parses start_date when present', () {
+      final task = TaskProvider.taskFromSupabaseJson(
+          baseJson(startDate: '2026-01-15'));
+      expect(task.startDate, DateTime(2026, 1, 15));
+    });
+
+    test('falls back to empty string when description is null', () {
+      final task =
+          TaskProvider.taskFromSupabaseJson(baseJson(description: null));
+      expect(task.description, '');
+    });
+
+    test('parses steps as List of Maps', () {
+      final task = TaskProvider.taskFromSupabaseJson(
+        baseJson(steps: [
+          {'step': 'do A', 'estimatedMinutes': 5},
+        ]),
+      );
+      expect(task.steps, isNotNull);
+      expect(task.steps!.length, 1);
+      expect(task.steps!.first['step'], 'do A');
+    });
+
+    test('null steps result in null task.steps', () {
+      final task = TaskProvider.taskFromSupabaseJson(baseJson(steps: null));
+      expect(task.steps, isNull);
+    });
+  });
+
+  group('parseSteps', () {
+    test('returns null for null input', () {
+      expect(TaskProvider.parseSteps(null), isNull);
+    });
+
+    test('parses list of Maps as-is', () {
+      final result = TaskProvider.parseSteps([
+        {'step': 'A', 'estimatedMinutes': 5},
+        {'step': 'B', 'estimatedMinutes': 10},
+      ]);
+      expect(result, isNotNull);
+      expect(result!.length, 2);
+      expect(result[0]['step'], 'A');
+    });
+
+    test('parses list of Strings by stripping JSON chars', () {
+      final result = TaskProvider.parseSteps(['{"step":"clean"}', 'bare step']);
+      expect(result, isNotNull);
+      expect(result!.length, 2);
+      // {} and " chars stripped
+      expect(result[0]['step'], contains('clean'));
+      expect(result[0]['estimatedMinutes'], 10);
+    });
+
+    test('parses list of non-string non-map values via toString()', () {
+      final result = TaskProvider.parseSteps([42, true]);
+      expect(result, isNotNull);
+      expect(result!.length, 2);
+      expect(result[0]['step'], '42');
+      expect(result[1]['step'], 'true');
+    });
+
+    test('parses JSON-encoded string of list', () {
+      final result = TaskProvider.parseSteps('[{"step":"A","estimatedMinutes":3}]');
+      expect(result, isNotNull);
+      expect(result!.length, 1);
+      expect(result[0]['step'], 'A');
+    });
+
+    test('returns null for invalid JSON string', () {
+      final result = TaskProvider.parseSteps('not-json-{{');
+      expect(result, isNull);
+    });
+
+    test('returns null for non-list non-string input', () {
+      expect(TaskProvider.parseSteps(42), isNull);
+      expect(TaskProvider.parseSteps({'a': 1}), isNull);
+    });
+  });
 }

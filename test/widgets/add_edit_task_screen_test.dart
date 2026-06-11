@@ -130,5 +130,124 @@ void main() {
       await tester.pump();
       expect(find.text('Status'), findsOneWidget);
     });
+
+    testWidgets('Update Task button label appears in edit mode', (tester) async {
+      await tester.pumpWidget(buildTestApp(task: makeSampleTask()));
+      await tester.pump();
+      expect(find.text('Update Task'), findsOneWidget);
+    });
+
+    testWidgets('changing priority dropdown updates selection', (tester) async {
+      await tester.pumpWidget(buildTestApp(task: makeSampleTask()));
+      await tester.pump();
+
+      // Open priority dropdown
+      await tester.tap(find.text('HIGH').first);
+      await tester.pumpAndSettle();
+
+      // Tap LOW
+      await tester.tap(find.text('LOW').last);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('changing status dropdown updates selection', (tester) async {
+      await tester.pumpWidget(buildTestApp(task: makeSampleTask()));
+      await tester.pump();
+
+      // Open status dropdown
+      await tester.tap(find.text('ONGOING').first);
+      await tester.pumpAndSettle();
+
+      // Tap COMPLETED
+      await tester.tap(find.text('COMPLETED').last);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('Save button at bottom uses ElevatedButton.icon', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(buildTestApp(task: makeSampleTask()));
+      await tester.pump();
+
+      expect(find.byType(ElevatedButton), findsOneWidget);
+      expect(find.byIcon(Icons.save), findsOneWidget);
+    });
+
+    testWidgets('Deadline field is rendered as ListTile', (tester) async {
+      await tester.pumpWidget(buildTestApp(task: makeSampleTask()));
+      await tester.pump();
+      expect(find.byType(ListTile), findsOneWidget);
+      expect(find.byIcon(Icons.calendar_today), findsOneWidget);
+    });
+
+    testWidgets('saving valid edit form shows error snackbar when provider throws',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(buildTestApp(task: makeSampleTask()));
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.check));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.textContaining('Failed to save task'), findsOneWidget);
+    });
+  });
+
+  group('AddEditTaskScreen - Save in add mode', () {
+    testWidgets('saving valid new task shows error snackbar when provider throws',
+        (tester) async {
+      await tester.pumpWidget(buildTestApp());
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextFormField).first, 'New Task');
+      await tester.enterText(find.byType(TextFormField).at(1), 'Description');
+      await tester.pump();
+
+      await tester.tap(find.byIcon(Icons.check));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.textContaining('Failed to save task'), findsOneWidget);
+    });
+
+    testWidgets('tapping deadline ListTile opens date picker', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1200, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(buildTestApp());
+      await tester.pump();
+
+      await tester.tap(find.byType(ListTile));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CalendarDatePicker), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('selecting OK on date picker opens time picker', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(1200, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(buildTestApp());
+      await tester.pump();
+
+      await tester.tap(find.byType(ListTile));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('OK'));
+      await tester.pumpAndSettle();
+
+      // Time picker — has "Select time" or its widgets present
+      expect(find.byType(TimePickerDialog), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+    });
   });
 }

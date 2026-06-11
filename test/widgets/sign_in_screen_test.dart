@@ -113,5 +113,45 @@ void main() {
 
       expect(find.text('Mohon isi email dan password'), findsOneWidget);
     });
+
+    testWidgets('shows snackbar when only password is filled', (tester) async {
+      await tester.pumpWidget(buildTestApp());
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField).last, 'password123');
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Sign in'));
+      await tester.pump();
+
+      expect(find.text('Mohon isi email dan password'), findsOneWidget);
+    });
+
+    testWidgets('sign in attempt with valid input triggers Supabase call (fails)',
+        (tester) async {
+      await tester.pumpWidget(buildTestApp());
+      await tester.pump();
+
+      await tester.enterText(find.byType(TextField).first, 'test@example.com');
+      await tester.enterText(find.byType(TextField).last, 'password123');
+      await tester.pump();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Sign in'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // Supabase fails (uninitialized) — error snackbar is shown.
+      expect(find.byType(SnackBar), findsOneWidget);
+    });
+
+    testWidgets('tapping Sign up link navigates to sign up screen',
+        (tester) async {
+      await tester.pumpWidget(buildTestApp());
+      await tester.pump();
+
+      await tester.tap(find.text('Sign up'));
+      await tester.pumpAndSettle();
+
+      // SignUpScreen has 'Create Account' header
+      expect(find.text('Create Account'), findsOneWidget);
+    });
   });
 }

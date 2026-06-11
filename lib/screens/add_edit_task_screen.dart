@@ -72,37 +72,47 @@ class _AddEditTaskScreenState extends State<AddEditTaskScreen> {
     }
   }
 
-  void _saveTask() {
+  Future<void> _saveTask() async {
     if (_formKey.currentState!.validate()) {
       final taskProvider = Provider.of<TaskProvider>(context, listen: false);
 
-      if (widget.task == null) {
-        // Add new task
-        final newTask = Task(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          title: _titleController.text,
-          description: _descriptionController.text,
-          startDate: _selectedStartDate,
-          deadline: _selectedDeadline,
-          status: _selectedStatus,
-          priority: _selectedPriority,
-          createdAt: DateTime.now(),
-        );
-        taskProvider.addTask(newTask);
-      } else {
-        // Update existing task
-        final updatedTask = widget.task!.copyWith(
-          title: _titleController.text,
-          description: _descriptionController.text,
-          startDate: _selectedStartDate,
-          deadline: _selectedDeadline,
-          status: _selectedStatus,
-          priority: _selectedPriority,
-        );
-        taskProvider.updateTask(widget.task!.id, updatedTask);
-      }
+      try {
+        if (widget.task == null) {
+          // Add new task
+          final newTask = Task(
+            id: DateTime.now().millisecondsSinceEpoch.toString(),
+            title: _titleController.text,
+            description: _descriptionController.text,
+            startDate: _selectedStartDate,
+            deadline: _selectedDeadline,
+            status: _selectedStatus,
+            priority: _selectedPriority,
+            createdAt: DateTime.now(),
+          );
+          await taskProvider.addTask(newTask);
+        } else {
+          // Update existing task
+          final updatedTask = widget.task!.copyWith(
+            title: _titleController.text,
+            description: _descriptionController.text,
+            startDate: _selectedStartDate,
+            deadline: _selectedDeadline,
+            status: _selectedStatus,
+            priority: _selectedPriority,
+          );
+          await taskProvider.updateTask(widget.task!.id, updatedTask);
+        }
 
-      Navigator.pop(context);
+        if (mounted) {
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Failed to save task: $e')),
+          );
+        }
+      }
     }
   }
 

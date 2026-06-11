@@ -1,6 +1,12 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:todolist_app_tekber10/screens/signup_screen.dart';
+
+class _DummyTaskProvider with ChangeNotifier {}
+
+class _DummyProfileProvider with ChangeNotifier {}
 
 Widget buildTestApp({bool fromOnboarding = false}) {
   return MaterialApp(home: SignUpScreen(fromOnboarding: fromOnboarding));
@@ -122,6 +128,145 @@ void main() {
         await tapSignUpButton(tester);
         expect(find.text('Password tidak cocok'), findsOneWidget);
       });
+
+      testWidgets('valid signup attempts Supabase signUp (which fails)',
+          (tester) async {
+        await tester.pumpWidget(buildTestApp());
+        await tester.pump();
+
+        final fields = find.byType(TextField);
+        await tester.enterText(fields.at(0), 'test@email.com');
+        await tester.enterText(fields.at(1), 'password123');
+        await tester.enterText(fields.at(2), 'password123');
+
+        await tapSignUpButton(tester);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        // Supabase fails — error snackbar appears.
+        expect(find.byType(SnackBar), findsOneWidget);
+      });
+    });
+
+    testWidgets('back button pops the screen', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (ctx) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () => Navigator.of(ctx).push(
+                  MaterialPageRoute(builder: (_) => const SignUpScreen()),
+                ),
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Create Account'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Create Account'), findsNothing);
+      expect(find.text('Open'), findsOneWidget);
+    });
+
+    testWidgets('Sign in link is present when fromOnboarding is true',
+        (tester) async {
+      await tester.pumpWidget(buildTestApp(fromOnboarding: true));
+      await tester.pump();
+      // The link triggers different navigation; just verify it renders.
+      expect(find.text('Sign in'), findsOneWidget);
+    });
+
+    testWidgets('tapping Sign in link with fromOnboarding=true replaces with SignInScreen',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(
+                create: (_) => _DummyTaskProvider()),
+            ChangeNotifierProvider(create: (_) => _DummyProfileProvider()),
+          ],
+          child: MaterialApp(
+            home: Builder(
+              builder: (ctx) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).push(
+                    MaterialPageRoute(
+                      builder: (_) => const SignUpScreen(fromOnboarding: true),
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Create Account'), findsOneWidget);
+
+      await tester.tap(find.text('Sign in'));
+      await tester.pumpAndSettle();
+
+      // SignInScreen has 'Welcome to My Vlog!' heading
+      expect(find.text('Welcome to My Vlog!'), findsOneWidget);
+    });
+
+    testWidgets('tapping Sign in link with fromOnboarding=false pops the route',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Builder(
+            builder: (ctx) => Scaffold(
+              body: ElevatedButton(
+                onPressed: () => Navigator.of(ctx).push(
+                  MaterialPageRoute(builder: (_) => const SignUpScreen()),
+                ),
+                child: const Text('Open'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Sign in'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Open'), findsOneWidget);
+    });
+
+    testWidgets('tapping confirm password visibility toggles the icon',
+        (tester) async {
+      await tester.pumpWidget(buildTestApp());
+      await tester.pump();
+
+      // Tap the second visibility icon (confirm password)
+      await tester.tap(find.byIcon(Icons.visibility_off_outlined).last);
+      await tester.pump();
+
+      expect(find.byIcon(Icons.visibility_outlined), findsOneWidget);
     });
   });
+}
+
+class SignUpScreenImports {
+  // Just to silence unused import lint if SignInScreen reference is needed.
 }

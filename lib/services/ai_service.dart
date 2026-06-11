@@ -2,17 +2,35 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:meta/meta.dart';
 
 class AIService {
   static String? getApiKey() {
     return dotenv.env['OPENAI_API_KEY'];
   }
 
+  /// HTTP client used for OpenAI API requests. Overridable in tests.
+  @visibleForTesting
+  static http.Client httpClient = http.Client();
+
+  /// Override the API key used by generateTaskSteps. When set, bypasses dotenv.
+  @visibleForTesting
+  static String? apiKeyOverride;
+
+  static String? _resolveApiKey() {
+    if (apiKeyOverride != null) return apiKeyOverride;
+    try {
+      return dotenv.env['OPENAI_API_KEY'];
+    } catch (_) {
+      return null;
+    }
+  }
+
   /// Generate task breakdown steps using OpenAI API
   static Future<Map<String, dynamic>> generateTaskSteps(
       {required String title, String? description}) async {
     try {
-      final apiKey = getApiKey();
+      final apiKey = _resolveApiKey();
 
       // If no API key, use fallback simulation
       if (apiKey == null || apiKey.isEmpty) {
@@ -23,10 +41,10 @@ class AIService {
       final url = Uri.parse('https://api.openai.com/v1/chat/completions');
 
       // Create messages
-      final messages = _createMessages(title, description);
+      final messages = createMessages(title, description);
 
       // Make API request
-      final response = await http
+      final response = await httpClient
           .post(
             url,
             headers: {
@@ -56,7 +74,7 @@ class AIService {
             return {
               'steps': List<Map<String, dynamic>>.from(result['steps']),
               'totalEstimatedMinutes': result['totalEstimatedMinutes'] ??
-                  _calculateTotalMinutes(result['steps'])
+                  calculateTotalMinutes(result['steps'])
             };
           }
         }
@@ -74,8 +92,11 @@ class AIService {
     }
   }
 
-  /// Create messages for OpenAI API
-  static List<Map<String, String>> _createMessages(
+  /// Create messages for OpenAI API.
+  ///
+  /// Public for testing.
+  @visibleForTesting
+  static List<Map<String, String>> createMessages(
       String title, String? description) {
     final messages = <Map<String, String>>[];
 
@@ -96,8 +117,11 @@ class AIService {
     return messages;
   }
 
-  /// Calculate total minutes from steps
-  static int _calculateTotalMinutes(List<dynamic> steps) {
+  /// Calculate total minutes from steps.
+  ///
+  /// Public for testing.
+  @visibleForTesting
+  static int calculateTotalMinutes(List<dynamic> steps) {
     int total = 0;
     for (var step in steps) {
       if (step is Map && step['estimatedMinutes'] != null) {
@@ -246,7 +270,7 @@ class AIService {
 
     return {
       'steps': steps,
-      'totalEstimatedMinutes': _calculateTotalMinutes(steps)
+      'totalEstimatedMinutes': calculateTotalMinutes(steps)
     };
   }
 }

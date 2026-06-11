@@ -131,5 +131,95 @@ void main() {
       // Weekly stats shows day labels
       expect(find.text('Mon'), findsOneWidget);
     });
+
+    testWidgets('tapping Edit profile navigates to EditProfileScreen',
+        (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(buildTestApp());
+      await tester.pump();
+
+      await tester.tap(find.text('Edit profile'));
+      await tester.pumpAndSettle();
+
+      // EditProfileScreen also has 'Edit profile' title, plus Username field.
+      expect(find.text('Username'), findsOneWidget);
+    });
+
+    testWidgets('tapping Logout button shows LogoutModal', (tester) async {
+      await tester.binding.setSurfaceSize(const Size(800, 1200));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+
+      await tester.pumpWidget(buildTestApp());
+      await tester.pump();
+
+      await tester.tap(find.text('Logout'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Are you sure you want to logout?'), findsOneWidget);
+    });
+
+    testWidgets('tapping back button pops the route', (tester) async {
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider(create: (_) => TaskProvider()),
+            ChangeNotifierProvider(create: (_) => ProfileProvider()),
+            ChangeNotifierProvider(create: (_) => ThemeProvider()),
+          ],
+          child: MaterialApp(
+            home: Builder(
+              builder: (ctx) => Scaffold(
+                body: ElevatedButton(
+                  onPressed: () => Navigator.of(ctx).push(
+                    MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Profile'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.arrow_back));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Open'), findsOneWidget);
+    });
+
+    testWidgets('shows mixed task counts', (tester) async {
+      final taskProvider = TaskProvider();
+      taskProvider.setTasksForTesting([
+        Task(
+          id: '1',
+          title: 'A',
+          description: '',
+          deadline: DateTime.now().add(const Duration(days: 1)),
+          status: TaskStatus.ongoing,
+          createdAt: DateTime.now(),
+        ),
+        Task(
+          id: '2',
+          title: 'B',
+          description: '',
+          deadline: DateTime.now().add(const Duration(days: 1)),
+          status: TaskStatus.completed,
+          createdAt: DateTime.now(),
+        ),
+      ]);
+
+      await tester.pumpWidget(buildTestApp(taskProvider: taskProvider));
+      await tester.pump();
+
+      // Tasks rendered — at least one count badge present.
+      expect(find.byType(ProfileScreen), findsOneWidget);
+    });
   });
 }

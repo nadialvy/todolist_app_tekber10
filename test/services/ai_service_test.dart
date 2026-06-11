@@ -1,4 +1,8 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:todolist_app_tekber10/services/ai_service.dart';
 
 void main() {
@@ -199,6 +203,182 @@ void main() {
 
         final steps = result['steps'] as List;
         expect(steps.length, greaterThanOrEqualTo(3));
+      });
+    });
+
+    group('getApiKey', () {
+      test('throws NotInitializedError when env not initialized', () {
+        expect(() => AIService.getApiKey(), throwsA(anything));
+      });
+    });
+
+    group('createMessages', () {
+      test('returns system and user messages', () {
+        final messages = AIService.createMessages('Test task', 'A description');
+
+        expect(messages.length, 2);
+        expect(messages[0]['role'], 'system');
+        expect(messages[1]['role'], 'user');
+        expect(messages[1]['content'], contains('Test task'));
+        expect(messages[1]['content'], contains('A description'));
+      });
+
+      test('omits description in user message when null', () {
+        final messages = AIService.createMessages('Just title', null);
+
+        expect(messages[1]['content'], contains('Just title'));
+        expect(messages[1]['content'], isNot(contains('description:')));
+      });
+
+      test('omits description in user message when empty string', () {
+        final messages = AIService.createMessages('Just title', '');
+
+        expect(messages[1]['content'], contains('Just title'));
+        expect(messages[1]['content'], isNot(contains('description:')));
+      });
+
+      test('system message mentions ADHD focus', () {
+        final messages = AIService.createMessages('x', null);
+        expect(messages[0]['content']!.toLowerCase(), contains('adhd'));
+      });
+    });
+
+    group('generateTaskSteps - HTTP path', () {
+      tearDown(() {
+        AIService.apiKeyOverride = null;
+        AIService.httpClient = http.Client();
+      });
+
+      test('uses HTTP API when API key is set and returns parsed steps',
+          () async {
+        AIService.apiKeyOverride = 'fake-key';
+        AIService.httpClient = MockClient((req) async {
+          expect(req.headers['Authorization'], 'Bearer fake-key');
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {
+                    'content': jsonEncode({
+                      'steps': [
+                        {'step': 'AI step 1', 'estimatedMinutes': 10},
+                        {'step': 'AI step 2', 'estimatedMinutes': 15},
+                      ],
+                      'totalEstimatedMinutes': 25,
+                    }),
+                  }
+                }
+              ],
+            }),
+            200,
+          );
+        });
+
+        final result = await AIService.generateTaskSteps(
+            title: 'Test', description: 'desc');
+        expect(result['steps'], isA<List>());
+        expect((result['steps'] as List).length, 2);
+        expect(result['totalEstimatedMinutes'], 25);
+      });
+
+      test('falls back to simulation when API returns non-200', () async {
+        AIService.apiKeyOverride = 'fake-key';
+        AIService.httpClient = MockClient((req) async {
+          return http.Response('Server error', 500);
+        });
+
+        final result = await AIService.generateTaskSteps(title: 'design');
+        // Falls back — design keyword produces design steps.
+        expect(result['steps'], isA<List>());
+      });
+
+      test('falls back when API returns 200 but content is missing',
+          () async {
+        AIService.apiKeyOverride = 'fake-key';
+        AIService.httpClient = MockClient((req) async {
+          return http.Response(jsonEncode({'choices': []}), 200);
+        });
+
+        final result = await AIService.generateTaskSteps(title: 'any task');
+        expect(result['steps'], isA<List>());
+      });
+
+      test('falls back when HTTP throws', () async {
+        AIService.apiKeyOverride = 'fake-key';
+        AIService.httpClient = MockClient((req) async {
+          throw Exception('Network error');
+        });
+
+        final result = await AIService.generateTaskSteps(title: 'meeting');
+        expect(result['steps'], isA<List>());
+      });
+
+      test('calculates totalEstimatedMinutes when response omits it',
+          () async {
+        AIService.apiKeyOverride = 'fake-key';
+        AIService.httpClient = MockClient((req) async {
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {
+                  'message': {
+                    'content': jsonEncode({
+                      'steps': [
+                        {'step': 'A', 'estimatedMinutes': 7},
+                        {'step': 'B', 'estimatedMinutes': 8},
+                      ],
+                      // no totalEstimatedMinutes
+                    }),
+                  }
+                }
+              ],
+            }),
+            200,
+          );
+        });
+
+        final result = await AIService.generateTaskSteps(title: 'Test');
+        expect(result['totalEstimatedMinutes'], 15);
+      });
+    });
+
+    group('calculateTotalMinutes', () {
+      test('sums estimatedMinutes from steps', () {
+        final total = AIService.calculateTotalMinutes([
+          {'step': 'a', 'estimatedMinutes': 10},
+          {'step': 'b', 'estimatedMinutes': 5},
+          {'step': 'c', 'estimatedMinutes': 15},
+        ]);
+        expect(total, 30);
+      });
+
+      test('returns 0 for empty list', () {
+        expect(AIService.calculateTotalMinutes([]), 0);
+      });
+
+      test('skips entries with null estimatedMinutes', () {
+        final total = AIService.calculateTotalMinutes([
+          {'step': 'a', 'estimatedMinutes': 10},
+          {'step': 'b', 'estimatedMinutes': null},
+          {'step': 'c', 'estimatedMinutes': 5},
+        ]);
+        expect(total, 15);
+      });
+
+      test('skips non-map entries', () {
+        final total = AIService.calculateTotalMinutes([
+          'a string',
+          {'step': 'b', 'estimatedMinutes': 7},
+        ]);
+        expect(total, 7);
+      });
+
+      test('handles num types (int and double)', () {
+        final total = AIService.calculateTotalMinutes([
+          {'step': 'a', 'estimatedMinutes': 5.5},
+          {'step': 'b', 'estimatedMinutes': 4},
+        ]);
+        expect(total, 9);
       });
     });
   });

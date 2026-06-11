@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../models/task.dart';
 import '../services/supabase_service.dart';
@@ -8,6 +9,13 @@ class TaskProvider with ChangeNotifier {
   bool _isLoading = false;
 
   bool get isLoading => _isLoading;
+
+  /// Override for tests — bypasses Supabase auth check when set.
+  @visibleForTesting
+  String? testUserIdOverride;
+
+  String? get _currentUserId =>
+      testUserIdOverride ?? supabase.auth.currentUser?.id;
 
   List<Task> get allTasks {
     // Update status for all tasks
@@ -67,13 +75,13 @@ class TaskProvider with ChangeNotifier {
           break;
       }
 
-      final currentUser = supabase.auth.currentUser;
-      if (currentUser == null) {
+      final userId = _currentUserId;
+      if (userId == null) {
         throw Exception('User not logged in');
       }
 
       final taskData = {
-        'user_id': currentUser.id,
+        'user_id': userId,
         'title': task.title,
         'description': task.description,
         'start_date': task.startDate?.toIso8601String().split('T')[0], // format date only
@@ -246,74 +254,14 @@ class TaskProvider with ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final currentUser = supabase.auth.currentUser;
-      if (currentUser == null) {
+      final userId = _currentUserId;
+      if (userId == null) {
         throw Exception('User not logged in');
       }
 
-      final response = await supabase.from('notes').select().eq('user_id', currentUser.id).order('created_at', ascending: false);
+      final response = await supabase.from('notes').select().eq('user_id', userId).order('created_at', ascending: false);
 
-      _tasks = (response as List).map((json) {
-        // Map string status dari Supabase ke enum
-        TaskStatus status;
-        switch (json['status']) {
-          case 'ongoing':
-            status = TaskStatus.ongoing;
-            break;
-          case 'completed':
-            status = TaskStatus.completed;
-            break;
-          case 'missed':
-            status = TaskStatus.missed;
-            break;
-          default:
-            status = TaskStatus.ongoing;
-        }
-
-        // Map string priority dari Supabase ke enum
-        TaskPriority priority;
-        switch (json['priority']) {
-          case 'low':
-            priority = TaskPriority.low;
-            break;
-          case 'medium':
-            priority = TaskPriority.medium;
-            break;
-          case 'high':
-            priority = TaskPriority.high;
-            break;
-          default:
-            priority = TaskPriority.medium;
-        }
-
-        // Parse date dari Supabase (format: YYYY-MM-DD)
-        DateTime deadline;
-        if (json['due_date'] != null) {
-          deadline = DateTime.parse(json['due_date']);
-        } else {
-          deadline = DateTime.now().add(const Duration(days: 1));
-        }
-
-        DateTime? startDate;
-        if (json['start_date'] != null) {
-          startDate = DateTime.parse(json['start_date']);
-        }
-
-        return Task(
-          id: json['id'],
-          title: json['title'],
-          description: json['description'] ?? '',
-          startDate: startDate,
-          deadline: deadline,
-          status: status,
-          priority: priority,
-          createdAt: DateTime.parse(json['created_at']),
-          completedAt: null, // notes table tidak punya completed_at
-          steps: json['steps'] != null 
-              ? _parseSteps(json['steps'])
-              : null,
-        );
-      }).toList();
+      _tasks = (response as List).map((json) => taskFromSupabaseJson(json as Map<String, dynamic>)).toList();
 
       _isLoading = false;
       notifyListeners();
@@ -386,8 +334,77 @@ class TaskProvider with ChangeNotifier {
     );
   }
 
-  /// Parse steps from various formats (JSONB, text[], or List)
-  static List<Map<String, dynamic>>? _parseSteps(dynamic stepsData) {
+  /// Convert a Supabase 'notes' row JSON to a Task model.
+  ///
+  /// Public so tests can verify the mapping without hitting Supabase.
+  @visibleForTesting
+  static Task taskFromSupabaseJson(Map<String, dynamic> json) {
+    // Map string status dari Supabase ke enum
+    TaskStatus status;
+    switch (json['status']) {
+      case 'ongoing':
+        status = TaskStatus.ongoing;
+        break;
+      case 'completed':
+        status = TaskStatus.completed;
+        break;
+      case 'missed':
+        status = TaskStatus.missed;
+        break;
+      default:
+        status = TaskStatus.ongoing;
+    }
+
+    // Map string priority dari Supabase ke enum
+    TaskPriority priority;
+    switch (json['priority']) {
+      case 'low':
+        priority = TaskPriority.low;
+        break;
+      case 'medium':
+        priority = TaskPriority.medium;
+        break;
+      case 'high':
+        priority = TaskPriority.high;
+        break;
+      default:
+        priority = TaskPriority.medium;
+    }
+
+    // Parse date dari Supabase (format: YYYY-MM-DD)
+    DateTime deadline;
+    if (json['due_date'] != null) {
+      deadline = DateTime.parse(json['due_date']);
+    } else {
+      deadline = DateTime.now().add(const Duration(days: 1));
+    }
+
+    DateTime? startDate;
+    if (json['start_date'] != null) {
+      startDate = DateTime.parse(json['start_date']);
+    }
+
+    return Task(
+      id: json['id'],
+      title: json['title'],
+      description: json['description'] ?? '',
+      startDate: startDate,
+      deadline: deadline,
+      status: status,
+      priority: priority,
+      createdAt: DateTime.parse(json['created_at']),
+      completedAt: null, // notes table tidak punya completed_at
+      steps: json['steps'] != null
+          ? parseSteps(json['steps'])
+          : null,
+    );
+  }
+
+  /// Parse steps from various formats (JSONB, text[], or List).
+  ///
+  /// Public so tests can verify parsing of edge cases.
+  @visibleForTesting
+  static List<Map<String, dynamic>>? parseSteps(dynamic stepsData) {
     if (stepsData == null) return null;
 
     try {
@@ -415,7 +432,7 @@ class TaskProvider with ChangeNotifier {
         try {
           final decoded = jsonDecode(stepsData);
           if (decoded is List) {
-            return _parseSteps(decoded);
+            return parseSteps(decoded);
           }
         } catch (e) {
           debugPrint('Could not parse steps string: $e');
