@@ -31,6 +31,16 @@ jobs:
       - name: Create .env
         run: echo "OPENAI_API_KEY=${{ secrets.PROD_OPENAI_API_KEY }}" > .env
 
+      - name: Run tests with coverage
+        run: flutter test --coverage
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: coverage/lcov.info
+          fail_ci_if_error: false
+
       - name: Build Flutter Web
         run: flutter build web --release --dart-define=ENVIRONMENT=production
 
