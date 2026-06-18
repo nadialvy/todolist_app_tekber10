@@ -7,11 +7,8 @@ import 'package:todolist_app_tekber10/providers/task_provider.dart';
 import 'package:todolist_app_tekber10/providers/theme_provider.dart';
 import 'package:todolist_app_tekber10/screens/focus_mode_screen.dart';
 
-<<<<<<< HEAD
 import '../helpers/fake_task_provider.dart';
 
-=======
->>>>>>> b8e6196 (feat: add flutter test coverage to both script dev and prod (#28))
 Task makeTask({
   String id = '1',
   String title = 'Test Task',
@@ -154,7 +151,6 @@ void main() {
       await tester.pump();
       expect(find.text('20:00'), findsOneWidget);
     });
-<<<<<<< HEAD
 
     testWidgets('timer counts down by 1 second when running', (tester) async {
       final task = makeTask(totalEstimatedMinutes: 1);
@@ -670,7 +666,5 @@ void main() {
       await tester.tap(find.text('OK'));
       await tester.pumpAndSettle();
     });
-=======
->>>>>>> b8e6196 (feat: add flutter test coverage to both script dev and prod (#28))
   });
 }

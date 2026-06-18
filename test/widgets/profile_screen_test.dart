@@ -131,7 +131,6 @@ void main() {
       // Weekly stats shows day labels
       expect(find.text('Mon'), findsOneWidget);
     });
-<<<<<<< HEAD
 
     testWidgets('tapping Edit profile navigates to EditProfileScreen',
         (tester) async {
@@ -222,7 +221,5 @@ void main() {
       // Tasks rendered — at least one count badge present.
       expect(find.byType(ProfileScreen), findsOneWidget);
     });
-=======
->>>>>>> b8e6196 (feat: add flutter test coverage to both script dev and prod (#28))
   });
 }
