@@ -157,7 +157,6 @@ void main() {
       await tester.pump();
       expect(find.byIcon(Icons.arrow_back), findsOneWidget);
     });
-<<<<<<< HEAD
 
     testWidgets('tapping back button pops the route', (tester) async {
       final provider = ThemeProvider();
@@ -214,7 +213,5 @@ void main() {
       await tester.tap(find.text('Outlined'));
       await tester.pump();
     });
-=======
->>>>>>> b8e6196 (feat: add flutter test coverage to both script dev and prod (#28))
   });
 }

@@ -5,11 +5,8 @@ import 'package:todolist_app_tekber10/models/task.dart';
 import 'package:todolist_app_tekber10/providers/task_provider.dart';
 import 'package:todolist_app_tekber10/screens/add_edit_task_screen.dart';
 
-<<<<<<< HEAD
 import '../helpers/fake_task_provider.dart';
 
-=======
->>>>>>> b8e6196 (feat: add flutter test coverage to both script dev and prod (#28))
 Widget buildTestApp({Task? task}) {
   return ChangeNotifierProvider(
     create: (_) => TaskProvider(),
@@ -135,7 +132,6 @@ void main() {
       await tester.pump();
       expect(find.text('Status'), findsOneWidget);
     });
-<<<<<<< HEAD
 
     testWidgets('Update Task button label appears in edit mode', (tester) async {
       await tester.pumpWidget(buildTestApp(task: makeSampleTask()));
@@ -329,7 +325,5 @@ void main() {
       await tester.tap(find.text('Cancel'));
       await tester.pumpAndSettle();
     });
-=======
->>>>>>> b8e6196 (feat: add flutter test coverage to both script dev and prod (#28))
   });
 }

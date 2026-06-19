@@ -113,7 +113,6 @@ void main() {
 
       expect(find.text('Mohon isi email dan password'), findsOneWidget);
     });
-<<<<<<< HEAD
 
     testWidgets('shows snackbar when only password is filled', (tester) async {
       await tester.pumpWidget(buildTestApp());
@@ -154,7 +153,5 @@ void main() {
       // SignUpScreen has 'Create Account' header
       expect(find.text('Create Account'), findsOneWidget);
     });
-=======
->>>>>>> b8e6196 (feat: add flutter test coverage to both script dev and prod (#28))
   });
 }
