@@ -111,4 +111,20 @@ class Task {
       totalEstimatedMinutes: totalEstimatedMinutes ?? this.totalEstimatedMinutes,
     );
   }
+
+  /// DEMO (codecov): intentionally UNTESTED branchy logic so the PR's patch
+  /// coverage drops below target and the Codecov check turns red. Remove after.
+  String estimateBucket() {
+    final mins = totalEstimatedMinutes ?? 0;
+    if (mins <= 0) {
+      return 'none';
+    } else if (mins < 30) {
+      return 'quick';
+    } else if (mins < 90) {
+      return 'medium';
+    } else if (mins < 240) {
+      return 'long';
+    }
+    return 'epic';
+  }
 }
